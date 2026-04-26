@@ -19,3 +19,6 @@ backend/generated/*.stl
 .idea/
 .vscode/
 *.swp
+
+# Logs
+*.log
