@@ -41,8 +41,8 @@ def validate_code(code: str) -> None:
     for pattern in FORBIDDEN_PATTERNS:
         if re.search(pattern, code):
             raise SandboxError(
-                f"Genererad kod innehåller en otillåten konstruktion (matchar /{pattern}/). "
-                f"Detta blockeras av säkerhetsskäl."
+                f"Generated code contains a forbidden construct (matches /{pattern}/). "
+                f"This is blocked for security reasons."
             )
 
 
@@ -70,7 +70,7 @@ RUNNER_TEMPLATE = textwrap.dedent("""
 
     result = _user_globals.get("result")
     if result is None:
-        sys.stderr.write("USER_CODE_ERROR: Variabeln 'result' saknas eller är None.\\n")
+        sys.stderr.write("USER_CODE_ERROR: Variable 'result' is missing or None.\\n")
         sys.exit(3)
 
     try:
@@ -105,12 +105,12 @@ def run_cadquery(code: str, out_path: Path, timeout: int = DEFAULT_TIMEOUT) -> N
             )
         except subprocess.TimeoutExpired as e:
             raise SandboxError(
-                f"Kodexekvering tog längre än {timeout} sekunder och avbröts."
+                f"Code execution took longer than {timeout} seconds and was aborted."
             ) from e
 
     if proc.returncode != 0:
-        stderr = proc.stderr.strip() or proc.stdout.strip() or "Okänt fel"
-        raise SandboxError(f"Kodexekvering misslyckades:\n{stderr}")
+        stderr = proc.stderr.strip() or proc.stdout.strip() or "Unknown error"
+        raise SandboxError(f"Code execution failed:\n{stderr}")
 
     if not out_path.exists() or out_path.stat().st_size == 0:
-        raise SandboxError("Ingen STL-fil producerades.")
+        raise SandboxError("No STL file was produced.")

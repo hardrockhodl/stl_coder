@@ -22,9 +22,9 @@ _gen_semaphore = asyncio.Semaphore(1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Fire-and-forget warmup så första riktiga requesten slipper cold-load.
-    # Blockerar inte startup — om Ollama är nere ska appen ändå booota och
-    # returnera rena 502:or från /api/generate.
+    # Fire-and-forget warmup so the first real request avoids cold-load.
+    # Doesn't block startup — if Ollama is down the app still boots and
+    # returns clean 502s from /api/generate.
     asyncio.create_task(warmup())
     yield
 
@@ -102,11 +102,11 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
 @app.get("/api/stl/{job_id}")
 async def get_stl(job_id: str) -> FileResponse:
     if not _JOB_ID_RE.fullmatch(job_id):
-        raise HTTPException(status_code=400, detail="Ogiltigt job_id")
+        raise HTTPException(status_code=400, detail="Invalid job_id")
 
     path = GENERATED_DIR / f"{job_id}.stl"
     if not path.exists():
-        raise HTTPException(status_code=404, detail="STL-fil hittades inte")
+        raise HTTPException(status_code=404, detail="STL file not found")
 
     return FileResponse(
         path,

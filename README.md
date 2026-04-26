@@ -1,30 +1,49 @@
 # STL Generator
 
-Beskriv ett 3D-objekt i text. En lokal LLM (qwen3-coder:30b via Ollama) skriver
-CadQuery-kod, koden körs i en sandbox och du får en STL-fil tillbaka.
+Describe a 3D object in text. A local LLM (qwen2.5-coder:32b-instruct-q4_K_S
+via Ollama) writes CadQuery code, the code runs in a sandbox, and you get
+an STL file back.
 
-## Snabbstart
+## Quick start
 
 ```bash
-./INSTALL.sh   # sätter upp venv, installerar Python- och npm-beroenden, kollar Ollama
-./RUN.sh       # startar backend (8000) och frontend (5173), Ctrl-C stänger båda
+./INSTALL.sh   # sets up venv, installs Python and npm dependencies, checks Ollama
+./RUN.sh       # starts backend (8000) and frontend (5173), Ctrl-C stops both
 ```
 
-Öppna sedan http://localhost:5173.
+Then open http://localhost:5173.
 
-Behöver du sätta upp manuellt — eller vill veta exakt vad scripten gör — läs
-vidare.
+If you'd rather set things up manually — or want to know exactly what the
+scripts do — read on.
 
-## Förkrav
+## Prerequisites
 
-- **Python 3.10, 3.11 eller 3.12** (CadQuery saknar wheels för 3.13/3.14 på PyPI)
-- **Node 20+**
-- **Ollama** installerat och igång — https://ollama.com
-- Modellen hämtad: `ollama pull qwen3-coder:30b`
+1. **Python 3.10, 3.11, or 3.12** (CadQuery has no wheels for 3.13/3.14 on PyPI)
+2. **Node 20+**
+3. **Ollama** installed and running — https://ollama.com
+4. Pull the LLM model (~19 GB):
 
-## Backend-setup (manuellt)
+       ollama pull qwen2.5-coder:32b-instruct-q4_K_S
 
-Med en vanlig pip-venv (Python 3.10–3.12):
+   Requires ~36 GB unified memory to run smoothly. If you have less RAM,
+   see "Smaller models" below.
+
+### Smaller models
+
+If the 32B model is too big for your machine, alternatives in descending order:
+
+| RAM    | Model                                  | Size   |
+|--------|----------------------------------------|--------|
+| 36 GB+ | `qwen2.5-coder:32b-instruct-q4_K_S`   | 19 GB  |
+| 24 GB  | `qwen2.5-coder:14b-instruct-q6_K`     | 12 GB  |
+| 16 GB  | `qwen2.5-coder:14b`                    | 9 GB   |
+| 8 GB   | `qwen2.5-coder:7b`                     | 4.7 GB |
+
+Change `DEFAULT_MODEL` in `backend/llm.py` if you switch models.
+
+## Backend setup (manual)
+
+With a regular pip venv (Python 3.10–3.12):
 
 ```bash
 cd backend
@@ -34,7 +53,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Alternativt med conda/mamba:
+Alternatively with conda/mamba:
 
 ```bash
 mamba create -n stlgen python=3.11 -c conda-forge -y
@@ -44,9 +63,9 @@ pip install -r backend/requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Backend lyssnar nu på `http://localhost:8000`.
+The backend now listens on `http://localhost:8000`.
 
-## Frontend-setup
+## Frontend setup
 
 ```bash
 cd frontend
@@ -54,77 +73,84 @@ npm install
 npm run dev
 ```
 
-Öppna `http://localhost:5173`.
+Open `http://localhost:5173`.
 
-Vite proxy:ar `/api` → `http://localhost:8000`, så frontend och backend
-talar utan CORS-strul under utveckling.
+Vite proxies `/api` → `http://localhost:8000`, so the frontend and backend
+talk without CORS hassles during development.
 
-## Användning
+## Usage
 
-1. Skriv in en beskrivning, t.ex.:
-   - `en kub 20×20×20 mm med ett cylindriskt hål med diameter 10 mm rakt igenom`
-   - `en tandkrämshållare med tre fack, 8 cm hög`
-   - `en enkel kaffemugg, 8 cm hög, 7 cm diameter, med ett handtag`
-   - `en hexagonal mutter M10 med standardgängprofil-clearance`
-2. Klicka "Generera" (eller `⌘/Ctrl+Enter`).
-3. Vänta — modellen genererar kod, sandboxen kör den, STL-filen visas i 3D.
-4. Klicka "Ladda ner STL" för att spara filen.
+1. Type a description, for example:
+   - `a 20×20×20 mm cube with a 10 mm cylindrical hole through the middle`
+   - `a toothbrush holder with three compartments, 8 cm tall`
+   - `a simple coffee mug, 8 cm tall, 7 cm diameter, with a handle`
+   - `a hexagonal M10 nut with standard thread-profile clearance`
+2. Click "Generate" (or press `⌘/Ctrl+Enter`).
+3. Wait — the model writes code, the sandbox runs it, the STL appears in 3D.
+4. Click "Download STL" to save the file.
 
-Den genererade Python-koden visas under previewen så du kan se vad modellen
-gjorde och justera prompten om resultatet inte stämmer.
+The generated Python code is shown below the preview so you can see what
+the model did and tweak the prompt if the result isn't right.
 
-## Säkerhet
+## Security
 
-Eftersom backend kör LLM-genererad kod gäller följande:
+Because the backend runs LLM-generated code:
 
-- Genererad kod körs **alltid** i en separat subprocess med 30s timeout —
-  aldrig `exec()` i FastAPI-processen.
-- En regex-validator blockerar misstänkta mönster (`import os`,
-  `import subprocess`, `open(`, `exec(`, `eval(`, `__import__`, m.fl.) före
-  körning.
-- I subprocessen sätts `RLIMIT_AS` (1 GiB) och `RLIMIT_CPU` (60 s) på
-  POSIX-system.
+- Generated code **always** runs in a separate subprocess with a 30 s
+  timeout — never `exec()` inside the FastAPI process.
+- A regex validator blocks suspicious patterns (`import os`,
+  `import subprocess`, `open(`, `exec(`, `eval(`, `__import__`, etc.) before
+  execution.
+- The subprocess sets `RLIMIT_AS` (1 GiB) and `RLIMIT_CPU` (60 s) on POSIX.
 
-**För produktion: kör backend i en sandboxad container.** Lägg t.ex.
-backend i en Docker-container utan nätverk och med en read-only rot, eller
-använd `firejail`. Den nuvarande sandboxen är tillräcklig för lokal
-hobbyanvändning men inte för en publik tjänst.
+**For production: run the backend in a sandboxed container.** Drop the
+backend into a Docker container with no network and a read-only root, or
+use `firejail`. The current sandbox is good enough for local hobby use but
+not for a public service.
 
-## Felsökning
+## Troubleshooting
 
-| Symptom | Lösning |
+| Symptom | Fix |
 |---|---|
-| `Kunde inte ansluta till Ollama` | `ollama serve` körs inte. Starta den, eller se om porten 11434 är upptagen. |
-| `model 'qwen3-coder:30b' not found` | Kör `ollama pull qwen3-coder:30b`. |
-| `Ollama svarade inte inom timeout (10 min)` | Modellen har förmodligen hängt sig — `pkill ollama && ollama serve`, vänta 30 s, försök igen. Se även "Tips: håll modellen varm" nedan. |
-| `ModuleNotFoundError: No module named 'cadquery'` | CadQuery är inte installerat i den python som uvicorn körs med. Installera via conda/mamba (se Backend-setup). |
-| `Genererad kod innehåller en otillåten konstruktion` | Modellen försökte importera något förbjudet. Justera prompten eller modellens temperature. |
-| `Variabeln 'result' saknas` | Modellen följde inte system-prompten. Försök igen — eventuellt sänk `temperature`. |
-| `Kodexekvering tog längre än 30 sekunder` | Komplext objekt eller oändlig loop. Förenkla prompten. |
-| 3D-vyn visar ingenting | Öppna devtools-konsolen — STL kan vara tom. Kolla att backend returnerade en korrekt STL. |
+| `Could not connect to Ollama` | `ollama serve` is not running. Start it, or check whether port 11434 is in use. |
+| `model '...' not found` | Run `ollama pull qwen2.5-coder:32b-instruct-q4_K_S`. |
+| `Ollama did not respond within the timeout (10 min)` | The model probably hung — `pkill ollama && ollama serve`, wait 30 s, try again. See also "Keeping the model warm" below. |
+| `ModuleNotFoundError: No module named 'cadquery'` | CadQuery isn't installed in the Python that uvicorn runs with. Install via conda/mamba (see Backend setup). |
+| `Generated code contains a forbidden construct` | The model tried to import something forbidden. Adjust the prompt or the temperature. |
+| `Variable 'result' is missing` | The model didn't follow the system prompt. Try again — possibly lower `temperature`. |
+| `Code execution took longer than 30 seconds` | Complex object or infinite loop. Simplify the prompt. |
+| 3D view shows nothing | Open the devtools console — the STL may be empty. Verify that the backend returned a valid STL. |
 
-### Tips: håll modellen varm
+### The model takes forever or times out
 
-`qwen3-coder:30b` tar ~60–120 s att ladda in i minnet första gången. Ollama
-unloadar modeller efter 5 minuters inaktivitet som default. För att slippa
-cold loads, starta Ollama med:
+The first request after Ollama starts loads the model into memory, which
+takes 30–90 seconds for the 32B model. To avoid that:
 
 ```bash
+pkill ollama
 OLLAMA_KEEP_ALIVE=-1 ollama serve
 ```
 
-Då stannar modellen i minnet tills du stänger Ollama. Använder ~18 GB RAM
-permanent — värt det om du genererar ofta.
+The model now stays in memory permanently (~19 GB RAM). Pre-warm right
+after start:
 
-Backenden gör två saker som hjälper utan environment-variabeln:
+```bash
+curl http://localhost:11434/api/generate \
+  -d '{"model":"qwen2.5-coder:32b-instruct-q4_K_S","prompt":"hi","keep_alive":-1}'
+```
 
-1. Skickar `keep_alive: 30m` i varje request
-2. Triggar en bakgrundsmässig "warmup" mot Ollama vid uvicorn-uppstart, så
-   modellen ofta är inladdad innan första prompten kommer in
+The backend already sends `keep_alive: 30m` on every request and triggers
+a background "warmup" against Ollama at uvicorn startup. `OLLAMA_KEEP_ALIVE=-1`
+is still the safest bet if you generate often.
 
-`OLLAMA_KEEP_ALIVE=-1` är ändå säkrast.
+### The model returns explanatory text instead of just code
 
-## Endpoints (för API-tester)
+This shouldn't happen with qwen2.5-coder + structured output, but if it
+does: check that your Ollama is version 0.5+ (run `ollama --version`).
+Structured output (`format` with a JSON schema) requires Ollama 0.5 or
+later. Upgrade with `brew upgrade ollama` on Mac.
+
+## Endpoints (for API testing)
 
 ```bash
 curl http://localhost:8000/api/health
@@ -138,9 +164,9 @@ curl -X POST http://localhost:8000/api/generate \
 curl -O http://localhost:8000/api/stl/<job_id>
 ```
 
-## Bonusfunktioner
+## Bonus features
 
-- Justerbar temperature: implementerat (input i UI)
-- Modell-väljare: stöds av API:et (`model` i request-body) — inget UI ännu
-- Iterate-knapp: ej implementerad
-- Historik i localStorage: ej implementerad
+- Adjustable temperature: implemented (input in the UI)
+- Model selector: supported by the API (`model` in request body) — no UI yet
+- Iterate button: not implemented
+- History in localStorage: not implemented

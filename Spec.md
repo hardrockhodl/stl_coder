@@ -1,29 +1,29 @@
 # STL Generator Web App – Build Spec
 
-Bygg en webbapp som låter användaren beskriva ett 3D-objekt i text, skickar beskrivningen till en lokal LLM (qwen3-coder:30b via Ollama), låter modellen skriva CadQuery-Python-kod, kör koden i en sandbox och returnerar en STL-fil till användaren.
+Build a web app that lets the user describe a 3D object in text, sends the description to a local LLM (qwen3-coder:30b via Ollama), has the model write CadQuery Python code, runs the code in a sandbox, and returns an STL file to the user.
 
 ## Stack
 
 - **Backend:** Python 3.11+, FastAPI, uvicorn, httpx, cadquery
-- **Frontend:** React + Vite (JavaScript, inte TypeScript för enkelhet), three.js för 3D-preview
-- **LLM:** Ollama på `http://localhost:11434`, modell `qwen3-coder:30b`
-- **CAD-motor:** CadQuery (riktig Python — modellen hanterar det bättre än OpenSCAD)
+- **Frontend:** React + Vite (JavaScript, not TypeScript for simplicity), three.js for 3D preview
+- **LLM:** Ollama at `http://localhost:11434`, model `qwen3-coder:30b`
+- **CAD engine:** CadQuery (real Python — the model handles it better than OpenSCAD)
 
-## Projektstruktur
+## Project structure
 
 ```
 stl-generator/
 ├── backend/
-│   ├── main.py              # FastAPI-app
-│   ├── llm.py               # Ollama-klient
-│   ├── sandbox.py           # Säker exekvering av CadQuery-kod
-│   ├── prompts.py           # System-prompts
+│   ├── main.py              # FastAPI app
+│   ├── llm.py               # Ollama client
+│   ├── sandbox.py           # Safe execution of CadQuery code
+│   ├── prompts.py           # System prompts
 │   ├── requirements.txt
-│   └── generated/           # Output STL-filer (gitignored)
+│   └── generated/           # Output STL files (gitignored)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx
-│   │   ├── StlViewer.jsx    # three.js-baserad preview
+│   │   ├── StlViewer.jsx    # three.js-based preview
 │   │   ├── main.jsx
 │   │   └── index.css
 │   ├── index.html
@@ -33,7 +33,7 @@ stl-generator/
 └── .gitignore
 ```
 
-## Backend – krav
+## Backend – requirements
 
 ### `requirements.txt`
 ```
@@ -44,90 +44,90 @@ cadquery>=2.4
 python-multipart>=0.0.9
 ```
 
-> Notera: CadQuery installeras enklast via conda/mamba (`mamba install -c conda-forge cadquery`). Skriv det i README.
+> Note: CadQuery is easiest to install via conda/mamba (`mamba install -c conda-forge cadquery`). Note this in the README.
 
 ### `prompts.py`
-En system-prompt som instruerar modellen att:
-- Bara svara med körbar Python-kod (ingen markdown, ingen förklarande text)
-- Använda CadQuery (`import cadquery as cq`)
-- Tilldela det slutliga objektet till en variabel som heter `result`
-- Aldrig importera moduler utöver `cadquery`, `math` och standardlib-matematik
-- Aldrig läsa/skriva filer, aldrig göra nätverksanrop, aldrig anropa `exec`/`eval`/`__import__`
+A system prompt that instructs the model to:
+- Reply only with executable Python code (no markdown, no explanatory text)
+- Use CadQuery (`import cadquery as cq`)
+- Assign the final object to a variable named `result`
+- Never import modules other than `cadquery`, `math`, and standard-library math
+- Never read/write files, never make network calls, never call `exec` / `eval` / `__import__`
 
-Inkludera 1–2 few-shot-exempel (t.ex. en kub med hål, en enkel mugg).
+Include 1–2 few-shot examples (e.g. a cube with a hole, a simple mug).
 
 ### `llm.py`
-- Async-funktion `generate_code(prompt: str) -> str`
-- POSTar till `http://localhost:11434/api/generate` med `model="qwen3-coder:30b"`, `stream=False`
-- Skickar med system-prompten från `prompts.py`
-- Strippar eventuella markdown-staket (```python … ```) från svaret innan retur
+- Async function `generate_code(prompt: str) -> str`
+- POSTs to `http://localhost:11434/api/generate` with `model="qwen3-coder:30b"`, `stream=False`
+- Sends the system prompt from `prompts.py`
+- Strips any markdown fences (```python … ```) from the response before returning
 
 ### `sandbox.py`
-- Funktion `run_cadquery(code: str, out_path: Path) -> None`
-- Kör koden i en subprocess med timeout (t.ex. 30 sekunder) — använd `subprocess.run` med `python -c`, INTE `exec()` i samma process
-- Subprocessen ska:
-  1. Köra koden
-  2. Plocka ut variabeln `result`
-  3. Anropa `cq.exporters.export(result, str(out_path))`
-- Returnera tydligt fel om koden kraschar, timeout, eller om `result` saknas
+- Function `run_cadquery(code: str, out_path: Path) -> None`
+- Runs the code in a subprocess with a timeout (e.g. 30 seconds) — use `subprocess.run` with `python -c`, NOT `exec()` in the same process
+- The subprocess must:
+  1. Run the code
+  2. Pull out the variable `result`
+  3. Call `cq.exporters.export(result, str(out_path))`
+- Return a clear error if the code crashes, times out, or `result` is missing
 
 ### `main.py`
 Endpoints:
-- `POST /api/generate` — body: `{"prompt": "..."}` → returnerar `{"job_id": "...", "code": "...", "stl_url": "/api/stl/{job_id}"}`
-- `GET /api/stl/{job_id}` — returnerar STL-filen som `application/sla`
-- CORS: tillåt `http://localhost:5173` (Vite dev-server)
+- `POST /api/generate` — body: `{"prompt": "..."}` → returns `{"job_id": "...", "code": "...", "stl_url": "/api/stl/{job_id}"}`
+- `GET /api/stl/{job_id}` — returns the STL file as `application/sla`
+- CORS: allow `http://localhost:5173` (Vite dev server)
 
-Job-id kan vara en UUID. Lagra STL-filer i `backend/generated/{job_id}.stl`.
+The job id can be a UUID. Store STL files at `backend/generated/{job_id}.stl`.
 
-## Frontend – krav
+## Frontend – requirements
 
 ### `App.jsx`
-- Stort textfält för prompt (placeholder: t.ex. "En tandkrämshållare med tre fack, 8 cm hög")
-- "Generera"-knapp (disabled medan request pågår)
-- När svaret kommer:
-  - Visa den genererade CadQuery-koden i ett kollapsbart `<pre>`-block med syntax-highlighting (använd `highlight.js` eller `prismjs`)
-  - Visa STL-filen i `<StlViewer />`
-  - Visa en nedladdningsknapp som länkar till `stl_url`
-- Felhantering: visa tydligt felmeddelande om backend returnerar 4xx/5xx
+- Large textarea for the prompt (placeholder e.g. "A toothbrush holder with three compartments, 8 cm tall")
+- "Generate" button (disabled while a request is in flight)
+- When the response arrives:
+  - Show the generated CadQuery code in a collapsible `<pre>` block with syntax highlighting (use `highlight.js` or `prismjs`)
+  - Show the STL file inside `<StlViewer />`
+  - Show a download button linking to `stl_url`
+- Error handling: clearly show an error message when the backend returns 4xx/5xx
 
 ### `StlViewer.jsx`
-- Använd `three` + `three/examples/jsm/loaders/STLLoader` + `OrbitControls`
-- Tar emot prop `url`, laddar STL:en, renderar i en `<canvas>` ca 500px hög
-- Auto-centrera och skala kameran så objektet får plats
-- Ljus + grid floor så det ser snyggt ut
+- Use `three` + `three/examples/jsm/loaders/STLLoader` + `OrbitControls`
+- Takes a `url` prop, loads the STL, renders it in a `<canvas>` about 500 px tall
+- Auto-center and scale the camera so the object fits
+- Light + grid floor for a polished look
 
 ### `vite.config.js`
-Proxy `/api` → `http://localhost:8000` så frontend kan anropa backend utan CORS-trubbel under dev.
+Proxy `/api` → `http://localhost:8000` so the frontend can call the backend without CORS hassles in dev.
 
-## README.md – krav
+## README.md – requirements
 
-Innehåll:
-1. Förkrav: Python 3.11+, Node 20+, Ollama installerat, modellen hämtad: `ollama pull qwen3-coder:30b`
-2. Backend-setup: skapa conda-miljö, `mamba install -c conda-forge cadquery`, `pip install -r requirements.txt`, `uvicorn main:app --reload`
-3. Frontend-setup: `cd frontend && npm install && npm run dev`
-4. Öppna `http://localhost:5173`
-5. Exempel-prompts att testa
-6. Felsökning: vad göra om Ollama inte svarar, om CadQuery-koden inte kör, etc.
+Contents:
+1. Prerequisites: Python 3.11+, Node 20+, Ollama installed, the model pulled: `ollama pull qwen3-coder:30b`
+2. Backend setup: create a conda env, `mamba install -c conda-forge cadquery`, `pip install -r requirements.txt`, `uvicorn main:app --reload`
+3. Frontend setup: `cd frontend && npm install && npm run dev`
+4. Open `http://localhost:5173`
+5. Example prompts to try
+6. Troubleshooting: what to do if Ollama doesn't respond, if the CadQuery code doesn't run, etc.
 
-## Säkerhetskrav (viktigt!)
+## Security requirements (important!)
 
-Eftersom vi kör LLM-genererad kod:
-- **Aldrig** `exec()` koden i backend-processen — alltid subprocess med timeout
-- Validera att den genererade koden inte innehåller strängar som `import os`, `import subprocess`, `open(`, `__import__`, `eval(`, `exec(` (regex-check innan körning, returnera fel om hit)
-- Subprocessen körs som samma användare i denna version, men nämn i README att man bör köra i Docker/firejail för produktion
-- Sätt resursgränser i subprocessen om möjligt (`resource.setrlimit` för minne/CPU på Linux/Mac)
+Because we run LLM-generated code:
+- **Never** `exec()` the code in the backend process — always subprocess with a timeout
+- Validate that the generated code does not contain strings like `import os`, `import subprocess`, `open(`, `__import__`, `eval(`, `exec(` (regex check before running, return an error on hit)
+- The subprocess runs as the same user in this version, but mention in the README that one should run it in Docker / firejail for production
+- Set resource limits in the subprocess where possible (`resource.setrlimit` for memory/CPU on Linux/Mac)
 
-## Acceptanskriterier
+## Acceptance criteria
 
-- `uvicorn main:app` startar utan fel
-- `npm run dev` startar Vite-servern
-- Prompt "en kub 20×20×20 mm med ett cylindriskt hål med diameter 10 mm rakt igenom" genererar en STL som visas i 3D-viewern och kan laddas ner
-- Om Ollama inte är igång: tydligt felmeddelande i frontend, inte en kraschad backend
-- Om modellen genererar trasig kod: felet visas i frontend tillsammans med koden, så användaren kan justera prompten
+- `uvicorn main:app` starts without errors
+- `npm run dev` starts the Vite server
+- Prompt "a 20×20×20 mm cube with a 10 mm diameter cylindrical hole straight through" generates an STL that shows up in the 3D viewer and can be downloaded
+- If Ollama isn't running: a clear error in the frontend, not a crashed backend
+- If the model produces broken code: the error is shown in the frontend together with the code, so the user can adjust the prompt
 
-## Bonusfunktioner (gör om tid finns)
+## Bonus features (do if time permits)
 
-- "Iterate"-knapp: skicka tillbaka kod + felmeddelande till modellen för en ny tagning
-- Historik över tidigare genereringar (i localStorage)
-- Justerbar `temperature` för Ollama-anropet
-- Stöd för flera modeller (dropdown)
+- "Iterate" button: send the code + error message back to the model for another shot
+- History of previous generations (in localStorage)
+- Adjustable `temperature` for the Ollama call
+- Support for multiple models (dropdown)

@@ -1,13 +1,14 @@
 import asyncio
+import json
 import re
 
 import httpx
 
 from prompts import SYSTEM_PROMPT
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-DEFAULT_MODEL = "qwen3-coder:30b"
-KEEP_ALIVE = "30m"  # håll modellen i RAM 30 min efter senaste request
+OLLAMA_URL = "http://localhost:11434/api/chat"
+DEFAULT_MODEL = "qwen2.5-coder:32b-instruct-q4_K_S"
+KEEP_ALIVE = "30m"
 
 
 class LLMError(Exception):
@@ -15,6 +16,7 @@ class LLMError(Exception):
 
 
 def _strip_code_fences(text: str) -> str:
+    """Fallback: extract first fenced code block if model ignores schema."""
     text = text.strip()
     m = re.search(r"```(?:python|py)?\s*\n(.*?)```", text, re.DOTALL)
     if m:
@@ -29,59 +31,83 @@ async def generate_code(
 ) -> str:
     payload = {
         "model": model,
-        "prompt": prompt,
-        "system": SYSTEM_PROMPT,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
         "stream": False,
         "keep_alive": KEEP_ALIVE,
+        "format": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": (
+                        "Executable Python code using CadQuery. "
+                        "Must define a variable named 'result'."
+                    ),
+                },
+            },
+            "required": ["code"],
+        },
         "options": {"temperature": temperature},
     }
 
+    timeout = httpx.Timeout(connect=5.0, read=600.0, write=10.0, pool=5.0)
     response = None
-    last_exc: Exception | None = None
     for attempt in range(3):
         try:
-            timeout = httpx.Timeout(connect=5.0, read=600.0, write=10.0, pool=5.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(OLLAMA_URL, json=payload)
             break
         except httpx.ConnectError as e:
             raise LLMError(
-                f"Kunde inte ansluta till Ollama på {OLLAMA_URL}. "
-                f"Starta Ollama med 'ollama serve' och kör 'ollama pull {model}'."
+                f"Could not connect to Ollama at {OLLAMA_URL}. "
+                f"Start Ollama with 'ollama serve' and run "
+                f"'ollama pull {model}'."
             ) from e
         except httpx.TimeoutException as e:
             raise LLMError(
-                "Ollama svarade inte inom timeout (10 min). Modellen kan ha "
-                "hängt sig. Testa 'pkill ollama && ollama serve' i en terminal."
+                "Ollama did not respond within the timeout (10 min). The model "
+                "may have hung. Try 'pkill ollama && ollama serve'."
             ) from e
         except (httpx.ReadError, httpx.RemoteProtocolError) as e:
-            last_exc = e
             if attempt == 2:
                 raise LLMError(
-                    f"Nätverksfel mot Ollama efter 3 försök: {e}"
+                    f"Network error talking to Ollama after 3 attempts: {e}"
                 ) from e
             await asyncio.sleep(2 ** attempt)
 
-    assert response is not None  # loop antingen breakar eller raise:ar
-
-    if response.status_code != 200:
-        raise LLMError(
-            f"Ollama returnerade HTTP {response.status_code}: {response.text[:300]}"
-        )
+    if response is None or response.status_code != 200:
+        status = response.status_code if response else "no response"
+        body = response.text[:300] if response else ""
+        raise LLMError(f"Ollama returned HTTP {status}: {body}")
 
     data = response.json()
-    raw = data.get("response", "")
+    raw = data.get("message", {}).get("content", "")
     if not raw:
-        raise LLMError("Tomt svar från Ollama.")
+        raise LLMError("Empty response from Ollama.")
 
-    return _strip_code_fences(raw)
+    # Structured output returns JSON in the content field — parse it.
+    try:
+        parsed = json.loads(raw)
+        code = parsed.get("code", "").strip()
+    except json.JSONDecodeError:
+        # Fallback: the model didn't honor the schema (older Ollama versions)
+        code = _strip_code_fences(raw)
+
+    if not code:
+        raise LLMError("No code in the response from Ollama.")
+
+    return code
 
 
 async def warmup(model: str = DEFAULT_MODEL) -> bool:
-    """Trigger model load utan att generera. True om Ollama svarade."""
+    """Trigger model load without generating. True if Ollama responded."""
     payload = {
         "model": model,
-        "prompt": "",
+        "messages": [{"role": "user", "content": ""}],
+        "stream": False,
         "keep_alive": KEEP_ALIVE,
     }
     try:
