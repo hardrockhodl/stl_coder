@@ -21,7 +21,19 @@ export default function App() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [showCode, setShowCode] = useState(true);
+  const [models, setModels] = useState([]);
+  const [selectedModel, setSelectedModel] = useState(null);
   const codeRef = useRef(null);
+
+  useEffect(() => {
+    fetch("/api/models")
+      .then((r) => r.json())
+      .then((data) => {
+        setModels(data.models);
+        setSelectedModel(data.default);
+      })
+      .catch((e) => console.error("Failed to load models:", e));
+  }, []);
 
   useEffect(() => {
     if (codeRef.current && result?.code && showCode) {
@@ -62,7 +74,11 @@ export default function App() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, temperature }),
+        body: JSON.stringify({
+          prompt,
+          temperature,
+          model: selectedModel,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -113,7 +129,7 @@ export default function App() {
           <button
             className="btn-primary"
             onClick={submit}
-            disabled={loading || !prompt.trim()}
+            disabled={loading || !prompt.trim() || !selectedModel}
           >
             {loading ? (
               <>
@@ -132,6 +148,20 @@ export default function App() {
               </>
             )}
           </button>
+          <label className="model-picker">
+            Model
+            <select
+              value={selectedModel || ""}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={loading || models.length === 0}
+            >
+              {models.map((m) => (
+                <option key={m.id} value={m.id} title={m.description}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             Temperature
             <input

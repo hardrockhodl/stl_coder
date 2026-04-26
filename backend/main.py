@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from llm import DEFAULT_MODEL, LLMError, generate_code, warmup
+from llm import DEFAULT_MODEL_ID, MODELS, LLMError, generate_code, warmup
 from sandbox import SandboxError, run_cadquery
 
 GENERATED_DIR = Path(__file__).parent / "generated"
@@ -22,10 +22,11 @@ _gen_semaphore = asyncio.Semaphore(1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Fire-and-forget warmup so the first real request avoids cold-load.
-    # Doesn't block startup — if Ollama is down the app still boots and
-    # returns clean 502s from /api/generate.
-    asyncio.create_task(warmup())
+    # Only warm up the default model. Loading both 14b + 32b would take
+    # ~31 GB resident, which is too much on a 36 GB machine alongside
+    # macOS, browser, and dev tooling. The other model cold-loads on
+    # first selection (~30-60 s wait once, then cached for `keep_alive`).
+    asyncio.create_task(warmup(DEFAULT_MODEL_ID))
     yield
 
 
@@ -53,7 +54,7 @@ def _cleanup_old_stls(max_age_seconds: int = 3600) -> None:
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=4000)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
-    model: str | None = None
+    model: str = Field(default=DEFAULT_MODEL_ID)
 
 
 class GenerateResponse(BaseModel):
@@ -67,6 +68,21 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/api/models")
+async def list_models() -> dict:
+    return {
+        "default": DEFAULT_MODEL_ID,
+        "models": [
+            {
+                "id": model_id,
+                "label": meta["label"],
+                "description": meta["description"],
+            }
+            for model_id, meta in MODELS.items()
+        ],
+    }
+
+
 @app.post("/api/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest) -> GenerateResponse:
     async with _gen_semaphore:
@@ -75,7 +91,7 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         try:
             code = await generate_code(
                 req.prompt,
-                model=req.model or DEFAULT_MODEL,
+                model_id=req.model,
                 temperature=req.temperature,
             )
         except LLMError as e:

@@ -278,6 +278,36 @@ textarea.prompt.shimmer {
   cursor: not-allowed;
 }
 
+.controls select {
+  padding: 8px 32px 8px 14px;
+  background: var(--uc-surface);
+  color: var(--uc-text);
+  border: 2px solid var(--uc-border);
+  border-radius: 9999px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  /* Custom dropdown arrow in pastel purple — replaces native chevron */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='none' stroke='%23cba3f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M3 5l3 3 3-3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.controls select:focus {
+  outline: none;
+  border-color: var(--uc-purple);
+}
+
+.controls select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ─── Buttons ────────────────────────────────────────────────────────── */
 .btn-primary {
   padding: 14px 32px;

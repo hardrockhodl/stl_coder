@@ -7,12 +7,39 @@ import httpx
 from prompts import SYSTEM_PROMPT
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
-DEFAULT_MODEL = "qwen2.5-coder:32b-instruct-q4_K_S"
 KEEP_ALIVE = "30m"
+
+# Registry of available models. Keys are the user-facing IDs sent from the
+# frontend; values are the actual Ollama model strings + metadata.
+MODELS = {
+    "fast": {
+        "ollama_name": "qwen2.5-coder:14b-instruct-q6_K",
+        "label": "Fast (14B)",
+        "description": "~5-15s per request. Good for simple shapes.",
+    },
+    "better": {
+        "ollama_name": "qwen2.5-coder:32b-instruct-q4_K_S",
+        "label": "Better (32B)",
+        "description": "~15-40s per request. Handles complex geometry.",
+    },
+}
+
+DEFAULT_MODEL_ID = "fast"
 
 
 class LLMError(Exception):
     pass
+
+
+def resolve_model(model_id: str | None) -> str:
+    """Map user-facing model ID to actual Ollama model name."""
+    if not model_id:
+        model_id = DEFAULT_MODEL_ID
+    if model_id not in MODELS:
+        raise LLMError(
+            f"Unknown model: '{model_id}'. Choose one of: {list(MODELS.keys())}"
+        )
+    return MODELS[model_id]["ollama_name"]
 
 
 def _strip_code_fences(text: str) -> str:
@@ -26,9 +53,10 @@ def _strip_code_fences(text: str) -> str:
 
 async def generate_code(
     prompt: str,
-    model: str = DEFAULT_MODEL,
+    model_id: str | None = None,
     temperature: float = 0.2,
 ) -> str:
+    model = resolve_model(model_id)
     payload = {
         "model": model,
         "messages": [
@@ -63,18 +91,17 @@ async def generate_code(
         except httpx.ConnectError as e:
             raise LLMError(
                 f"Could not connect to Ollama at {OLLAMA_URL}. "
-                f"Start Ollama with 'ollama serve' and run "
-                f"'ollama pull {model}'."
+                f"Start Ollama with 'ollama serve' and run 'ollama pull {model}'."
             ) from e
         except httpx.TimeoutException as e:
             raise LLMError(
-                "Ollama did not respond within the timeout (10 min). The model "
-                "may have hung. Try 'pkill ollama && ollama serve'."
+                "Ollama did not respond within timeout (10 min). The model may have "
+                "hung. Try 'pkill ollama && ollama serve'."
             ) from e
         except (httpx.ReadError, httpx.RemoteProtocolError) as e:
             if attempt == 2:
                 raise LLMError(
-                    f"Network error talking to Ollama after 3 attempts: {e}"
+                    f"Network error to Ollama after 3 attempts: {e}"
                 ) from e
             await asyncio.sleep(2 ** attempt)
 
@@ -97,13 +124,14 @@ async def generate_code(
         code = _strip_code_fences(raw)
 
     if not code:
-        raise LLMError("No code in the response from Ollama.")
+        raise LLMError("No code in response from Ollama.")
 
     return code
 
 
-async def warmup(model: str = DEFAULT_MODEL) -> bool:
+async def warmup(model_id: str | None = None) -> bool:
     """Trigger model load without generating. True if Ollama responded."""
+    model = resolve_model(model_id)
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": ""}],
