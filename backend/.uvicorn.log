@@ -20,3 +20,17 @@ INFO:     127.0.0.1:55960 - "POST /api/generate HTTP/1.1" 422 Unprocessable Enti
 [research] hit: Masters of the Universe <https://en.wikipedia.org/wiki/Masters_of_the_Universe>
 INFO:     127.0.0.1:56106 - "POST /api/generate HTTP/1.1" 200 OK
 INFO:     127.0.0.1:56122 - "GET /api/stl/d527de94aa4d425d8cb3ef1a2ef0f8f1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56169 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56170 - "GET /api/models HTTP/1.1" 200 OK
+[research] hit: Masters of the Universe <https://en.wikipedia.org/wiki/Masters_of_the_Universe>
+INFO:     127.0.0.1:56172 - "POST /api/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56199 - "GET /api/stl/32233aef419746348b12c5e53d2a3b8c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56210 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56211 - "GET /api/models HTTP/1.1" 200 OK
+[research] hit: Corgi Toys <https://en.wikipedia.org/wiki/Corgi_Toys>
+INFO:     127.0.0.1:56212 - "POST /api/generate HTTP/1.1" 422 Unprocessable Entity
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [47388]
+INFO:     Stopping reloader process [47384]

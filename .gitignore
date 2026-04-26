@@ -22,3 +22,5 @@ backend/generated/*.stl
 
 # Logs
 *.log
+.*.log
+backend/.uvicorn.log

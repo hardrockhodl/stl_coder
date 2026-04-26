@@ -12,6 +12,20 @@ const LOADING_MESSAGES = [
   "Folding pixels into polygons...",
 ];
 
+const EXAMPLE_PROMPTS = [
+  "a toothbrush holder for 4 toothbrushes, cylindrical 60mm diameter, 100mm tall, with 16mm holes evenly spaced in a circle 5mm from the top, 3mm walls",
+  "a parts tray, 120 × 80 × 25mm, divided into 6 compartments (3 × 2 grid), 2mm walls, 1.5mm floor, rounded outer corners 4mm radius",
+  "a wall-mount hook: rectangular back plate 40 × 80 × 5mm with two 4mm screw holes 50mm apart, hook arm extending 60mm forward and curving up 30mm",
+  "a soap dish, oval 110 × 70 × 25mm, recessed pocket 90 × 50 × 15mm, four 4mm drainage holes in the bottom",
+];
+
+const PLACEHOLDER_PROMPTS = [
+  "A toothbrush holder for 4 toothbrushes...",
+  "A parts tray with 6 compartments...",
+  "A wall-mount hook with two screw holes...",
+  "A soap dish with drainage holes...",
+];
+
 export default function App() {
   const [prompt, setPrompt] = useState("");
   const [temperature, setTemperature] = useState(0.2);
@@ -27,7 +41,17 @@ export default function App() {
   const [iterating, setIterating] = useState(false);
   const [history, setHistory] = useState([]);
   const [currentStep, setCurrentStep] = useState(null);
+  const [clarification, setClarification] = useState(null);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const codeRef = useRef(null);
+
+  useEffect(() => {
+    if (prompt.trim()) return; // pause rotation while user is typing
+    const id = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % PLACEHOLDER_PROMPTS.length);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [prompt]);
 
   useEffect(() => {
     fetch("/api/models")
@@ -73,6 +97,7 @@ export default function App() {
     if (!prompt.trim() || loading) return;
     setLoading(true);
     setError(null);
+    setClarification(null);
     setResult(null);
     try {
       const res = await fetch("/api/generate", {
@@ -95,6 +120,11 @@ export default function App() {
         }
         return;
       }
+      if (data.clarification) {
+        setClarification(data.clarification);
+        return;
+      }
+      setClarification(null);
       setResult(data);
       setHistory((h) => {
         const next = [
@@ -183,6 +213,7 @@ export default function App() {
     setIterateInstruction("");
     setPrompt("");
     setCurrentStep(null);
+    setClarification(null);
   };
 
   const onKeyDown = (e) => {
@@ -205,12 +236,29 @@ export default function App() {
         <textarea
           id="prompt"
           className={`prompt${loading ? " shimmer" : ""}`}
-          placeholder="A toothbrush holder with three compartments, 8 cm tall"
+          placeholder={PLACEHOLDER_PROMPTS[placeholderIndex]}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={loading}
         />
+        {!result && (
+          <div className="example-chips">
+            <span className="example-label">Try:</span>
+            {EXAMPLE_PROMPTS.map((ex, i) => (
+              <button
+                key={i}
+                type="button"
+                className="example-chip"
+                onClick={() => setPrompt(ex)}
+                disabled={loading}
+                title={ex}
+              >
+                {ex.split(",")[0].replace(/^a /i, "")}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="controls">
           <button
             className="btn-primary"
@@ -285,6 +333,21 @@ export default function App() {
           <div className="error-title">Something went sideways</div>
           {error}
         </div>
+      )}
+
+      {clarification && (
+        <section className="card clarification-card">
+          <div className="clarification-header">
+            <span className="clarification-icon" aria-hidden="true">
+              ?
+            </span>
+            <h2>One quick question</h2>
+          </div>
+          <p className="clarification-question">{clarification}</p>
+          <p className="clarification-hint">
+            Edit your prompt above with this detail and click Generate again.
+          </p>
+        </section>
       )}
 
       {result?.stl_url && (

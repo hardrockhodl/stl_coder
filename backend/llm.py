@@ -31,6 +31,14 @@ class LLMError(Exception):
     pass
 
 
+class NeedsClarification(Exception):
+    """The model wants to ask the user a question instead of generating code."""
+
+    def __init__(self, question: str):
+        super().__init__(question)
+        self.question = question
+
+
 def resolve_model(model_id: str | None) -> str:
     """Map user-facing model ID to actual Ollama model name."""
     if not model_id:
@@ -82,11 +90,20 @@ async def generate_code(
                     "type": "string",
                     "description": (
                         "Executable Python code using CadQuery. "
-                        "Must define a variable named 'result'."
+                        "Must define a variable named 'result'. "
+                        "Provide this OR needs_clarification, not both."
+                    ),
+                },
+                "needs_clarification": {
+                    "type": "string",
+                    "description": (
+                        "A focused question (max 1-2 sentences) asking the "
+                        "user for the critical missing details. Provide "
+                        "this OR code, not both."
                     ),
                 },
             },
-            "required": ["code"],
+            # Neither is required — the model picks one.
         },
         "options": {"temperature": temperature},
     }
@@ -126,12 +143,17 @@ async def generate_code(
         raise LLMError("Empty response from Ollama.")
 
     # Structured output returns JSON in the content field — parse it.
+    clarification = ""
     try:
         parsed = json.loads(raw)
+        clarification = parsed.get("needs_clarification", "").strip()
         code = parsed.get("code", "").strip()
     except json.JSONDecodeError:
         # Fallback: the model didn't honor the schema (older Ollama versions)
         code = _strip_code_fences(raw)
+
+    if clarification and not code:
+        raise NeedsClarification(clarification)
 
     if not code:
         raise LLMError("No code in response from Ollama.")

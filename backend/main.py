@@ -14,6 +14,7 @@ from llm import (
     DEFAULT_MODEL_ID,
     MODELS,
     LLMError,
+    NeedsClarification,
     generate_code,
     iterate_code,
     repair_code,
@@ -81,6 +82,7 @@ class GenerateResponse(BaseModel):
     job_id: str
     code: str
     stl_url: str
+    clarification: str | None = None
 
 
 @app.get("/api/health")
@@ -123,6 +125,15 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
                 model_id=req.model,
                 temperature=req.temperature,
                 research_context=research_result.context,
+            )
+        except NeedsClarification as e:
+            # Return a normal 200 with clarification — the frontend treats
+            # this as "model wants more info", not as an error.
+            return GenerateResponse(
+                job_id="",
+                code="",
+                stl_url="",
+                clarification=e.question,
             )
         except LLMError as e:
             raise HTTPException(status_code=502, detail=str(e))
