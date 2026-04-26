@@ -149,6 +149,20 @@ Each iteration appears in the **History** list with a numbered chip:
 
 History is browser-only state; refreshing the page loses it.
 
+### Web research (built in)
+
+For prompts that mention specific objects ("Volvo 240", "iPhone 15",
+"basketball"), the backend looks up real-world dimensions and proportions
+on Wikipedia and injects the article summary into the system prompt before
+the model writes code. No setup required — Wikipedia's API is free and
+needs no account. Generic geometric prompts ("a 30mm cube") skip the
+lookup. The hit/skip decision is logged to `backend/.uvicorn.log` as
+`[research] hit: <title> <url>` or `[research] skipped: <reason>`.
+
+Coverage is uneven: famous things (cars, phones, household objects,
+animals) work well; niche or homemade objects return nothing and the
+model falls back to guessing — same as before.
+
 ### Auto-repair on broken geometry
 
 When CadQuery can't execute the generated code (e.g.,
@@ -288,6 +302,8 @@ Implemented:
   `current` badge — iterating from a reverted step branches off it
 - Auto-repair: on `SandboxError`, the backend asks the model to fix the
   code and retries once before surfacing a 422
+- Wikipedia research: real-world dimensions for named objects are pulled
+  from Wikipedia and injected into the system prompt (no API key)
 - Sandboxed CadQuery execution (subprocess, isolated mode, regex validator,
   resource limits, temp-dir cwd)
 - 3D preview with theme-aware background and pink rim light

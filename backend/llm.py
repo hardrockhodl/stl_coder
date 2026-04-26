@@ -55,12 +55,22 @@ async def generate_code(
     prompt: str,
     model_id: str | None = None,
     temperature: float = 0.2,
+    research_context: str = "",
 ) -> str:
     model = resolve_model(model_id)
+
+    system = SYSTEM_PROMPT
+    if research_context:
+        system = (
+            f"{SYSTEM_PROMPT}\n\n"
+            f"# Reference data for this request\n\n"
+            f"{research_context}"
+        )
+
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system},
             {"role": "user", "content": prompt},
         ],
         "stream": False,

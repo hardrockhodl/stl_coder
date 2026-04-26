@@ -19,6 +19,7 @@ from llm import (
     repair_code,
     warmup,
 )
+from research import research
 from sandbox import SandboxError, run_cadquery
 
 MAX_REPAIR_ATTEMPTS = 1  # number of model-driven repair attempts
@@ -107,11 +108,21 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
     async with _gen_semaphore:
         _cleanup_old_stls()
 
+        research_result = await research(req.prompt)
+        if research_result.used:
+            print(
+                f"[research] hit: {research_result.source_title} "
+                f"<{research_result.source_url}>"
+            )
+        elif research_result.error:
+            print(f"[research] skipped: {research_result.error}")
+
         try:
             code = await generate_code(
                 req.prompt,
                 model_id=req.model,
                 temperature=req.temperature,
+                research_context=research_result.context,
             )
         except LLMError as e:
             raise HTTPException(status_code=502, detail=str(e))

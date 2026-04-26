@@ -14,3 +14,67 @@ INFO:     127.0.0.1:55164 - "GET /api/stl/77731e4955b04778b18920444443fa31 HTTP/
 INFO:     127.0.0.1:55171 - "POST /api/generate HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55192 - "GET /api/stl/d56b796795d34222a27790af5463e4b0 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55196 - "POST /api/generate HTTP/1.1" 422 Unprocessable Entity
+WARNING:  WatchFiles detected changes in 'research.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40867]
+INFO:     Started server process [43422]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [43422]
+INFO:     Started server process [43499]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [43499]
+INFO:     Started server process [43516]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [43516]
+INFO:     Started server process [43558]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in '.venv/lib/python3.11/site-packages/wikipediaapi/_pages_dict/async_pages_dict.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/base_params.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/geo_search_meta.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_image/wikipedia_image.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/geo_search_params.py', '.venv/lib/python3.11/site-packages/~lick/decorators.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_pages_dict/images_dict.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/image_info.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/search_what.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/search_params.py', '.venv/lib/python3.11/site-packages/tenacity/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_pages_dict/pages_dict.py', '.venv/lib/python3.11/site-packages/~lick/_termui_impl.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/coordinate_type.py', '.venv/lib/python3.11/site-packages/click/decorators.py', '.venv/lib/python3.11/site-packages/~lick/globals.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/globe.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/coordinate.py', '.venv/lib/python3.11/site-packages/~lick/termui.py', '.venv/lib/python3.11/site-packages/wikipediaapi/exceptions/wikipedia_exception.py', '.venv/lib/python3.11/site-packages/click/_termui_impl.py', '.venv/lib/python3.11/site-packages/tenacity/before.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/page_commands.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_image/__init__.py', '.venv/lib/python3.11/site-packages/click/termui.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_version.py', '.venv/lib/python3.11/site-packages/click/_textwrap.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_resources/wikipedia_resource.py', '.venv/lib/python3.11/site-packages/~lick/_winconsole.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/images_params.py', '.venv/lib/python3.11/site-packages/~lick/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/exceptions/wiki_connection_error.py', '.venv/lib/python3.11/site-packages/~lick/_compat.py', '.venv/lib/python3.11/site-packages/~lick/core.py', '.venv/lib/python3.11/site-packages/click/_winconsole.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_pages_dict/async_images_dict.py', '.venv/lib/python3.11/site-packages/click/types.py', '.venv/lib/python3.11/site-packages/wikipediaapi/extract_format.py', '.venv/lib/python3.11/site-packages/click/__init__.py', '.venv/lib/python3.11/site-packages/tenacity/asyncio/retry.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_http_client/retry_utils.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/random_params.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/geosearch_sort.py', '.venv/lib/python3.11/site-packages/click/_compat.py', '.venv/lib/python3.11/site-packages/click/core.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/base.py', '.venv/lib/python3.11/site-packages/~lick/shell_completion.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/search_qi_profile.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_page/async_wikipedia_page.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/search_sort.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_wikipedia/async_wikipedia.py', '.venv/lib/python3.11/site-packages/wikipediaapi/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_resources/base_wikipedia_resource.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_http_client/sync_http_client.py', '.venv/lib/python3.11/site-packages/click/shell_completion.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/__init__.py', '.venv/lib/python3.11/site-packages/tenacity/after.py', '.venv/lib/python3.11/site-packages/~lick/testing.py', '.venv/lib/python3.11/site-packages/tenacity/_utils.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/link_commands.py', '.venv/lib/python3.11/site-packages/~lick/_textwrap.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/redirect_filter.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/imageinfo_params.py', '.venv/lib/python3.11/site-packages/wikipediaapi/exceptions/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_page/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/geo_point.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_page/wikipedia_page.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/search_meta.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/direction.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/coordinates_prop.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_http_client/async_http_client.py', '.venv/lib/python3.11/site-packages/click/testing.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/protocols.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_page/_base_wikipedia_page.py', '.venv/lib/python3.11/site-packages/wikipediaapi/exceptions/wiki_invalid_json_error.py', '.venv/lib/python3.11/site-packages/~lick/utils.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_pages_dict/__init__.py', '.venv/lib/python3.11/site-packages/~lick/types.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_http_client/__init__.py', '.venv/lib/python3.11/site-packages/tenacity/retry.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/search_prop.py', '.venv/lib/python3.11/site-packages/tenacity/before_sleep.py', '.venv/lib/python3.11/site-packages/tenacity/nap.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_resources/async_wikipedia_resource.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/search_commands.py', '.venv/lib/python3.11/site-packages/click/utils.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_image/async_wikipedia_image.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/exceptions/wiki_http_timeout_error.py', '.venv/lib/python3.11/site-packages/~lick/exceptions.py', '.venv/lib/python3.11/site-packages/~lick/parser.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/image_commands.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/namespace.py', '.venv/lib/python3.11/site-packages/wikipediaapi/exceptions/wiki_http_error.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/category_commands.py', '.venv/lib/python3.11/site-packages/wikipediaapi/cli.py', '.venv/lib/python3.11/site-packages/~lick/formatting.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_wikipedia/__init__.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_pages_dict/base_pages_dict.py', '.venv/lib/python3.11/site-packages/click/exceptions.py', '.venv/lib/python3.11/site-packages/click/parser.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_page/wikipedia_page_section.py', '.venv/lib/python3.11/site-packages/click/_utils.py', '.venv/lib/python3.11/site-packages/wikipediaapi/commands/geo_commands.py', '.venv/lib/python3.11/site-packages/click/formatting.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/search_results.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_image/_base_wikipedia_image.py', '.venv/lib/python3.11/site-packages/tenacity/asyncio/__init__.py', '.venv/lib/python3.11/site-packages/click/globals.py', '.venv/lib/python3.11/site-packages/tenacity/tornadoweb.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_http_client/base_http_client.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_params/coordinates_params.py', '.venv/lib/python3.11/site-packages/tenacity/stop.py', '.venv/lib/python3.11/site-packages/tenacity/wait.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_enums/search_info.py', '.venv/lib/python3.11/site-packages/wikipediaapi/exceptions/wiki_rate_limit_error.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_wikipedia/wikipedia.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_types/geo_box.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_http_client/retry_after_wait.py', '.venv/lib/python3.11/site-packages/wikipediaapi/_resources/__init__.py', '.venv/lib/python3.11/site-packages/~lick/_utils.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [43558]
+INFO:     Started server process [43867]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'research.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [43867]
+INFO:     Started server process [44459]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'research.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [44459]
+INFO:     Started server process [44671]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'research.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [44671]
+INFO:     Started server process [46233]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
