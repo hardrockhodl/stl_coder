@@ -1,18 +1,59 @@
 INFO:     Will watch for changes in these directories: ['/Users/christoffer.larsson/github-hardrockhodl/stl_coder/backend']
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [39116] using WatchFiles
-INFO:     Started server process [39120]
+INFO:     Started reloader process [39964] using WatchFiles
+INFO:     Started server process [39968]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:54214 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54346 - "GET /api/models HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54347 - "GET /api/models HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54351 - "POST /api/generate HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54357 - "GET /api/stl/4430b3e2eb87496c80bed8584061f98d HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54360 - "POST /api/iterate HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54365 - "GET /api/stl/cbd48792c0814840bde5563db3bb46db HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54370 - "POST /api/iterate HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54376 - "GET /api/stl/0a7bec96a2d243b6948c03ec369bede8 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54380 - "GET /api/stl/4430b3e2eb87496c80bed8584061f98d HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54384 - "POST /api/iterate HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54389 - "GET /api/stl/be5223c3f28b4d32bd93d7b1af7431b5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54990 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55009 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55010 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55011 - "POST /api/generate HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:55018 - "POST /api/generate HTTP/1.1" 422 Unprocessable Entity
+WARNING:  WatchFiles detected changes in 'llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [39968]
+INFO:     Started server process [40441]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'prompts.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40441]
+INFO:     Started server process [40538]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40538]
+INFO:     Started server process [40568]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40568]
+INFO:     Started server process [40587]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40587]
+INFO:     Started server process [40612]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40612]
+INFO:     Started server process [40636]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

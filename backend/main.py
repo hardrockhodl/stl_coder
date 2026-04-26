@@ -16,9 +16,12 @@ from llm import (
     LLMError,
     generate_code,
     iterate_code,
+    repair_code,
     warmup,
 )
 from sandbox import SandboxError, run_cadquery
+
+MAX_REPAIR_ATTEMPTS = 1  # number of model-driven repair attempts
 
 GENERATED_DIR = Path(__file__).parent / "generated"
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
@@ -116,12 +119,37 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         job_id = uuid.uuid4().hex
         out_path = GENERATED_DIR / f"{job_id}.stl"
 
-        try:
-            run_cadquery(code, out_path)
-        except SandboxError as e:
+        last_error: str | None = None
+        for attempt in range(MAX_REPAIR_ATTEMPTS + 1):
+            try:
+                run_cadquery(code, out_path)
+                last_error = None
+                break
+            except SandboxError as e:
+                last_error = str(e)
+                if attempt == MAX_REPAIR_ATTEMPTS:
+                    break
+                # Try to repair via the model
+                try:
+                    code = await repair_code(
+                        broken_code=code,
+                        error_message=last_error,
+                        model_id=req.model,
+                        temperature=req.temperature,
+                    )
+                except LLMError as repair_err:
+                    raise HTTPException(
+                        status_code=422,
+                        detail={"message": last_error, "code": code},
+                    ) from repair_err
+
+        if last_error is not None:
             raise HTTPException(
                 status_code=422,
-                detail={"message": str(e), "code": code},
+                detail={
+                    "message": f"Failed after auto-repair: {last_error}",
+                    "code": code,
+                },
             )
 
         return GenerateResponse(
@@ -149,12 +177,36 @@ async def iterate(req: IterateRequest) -> GenerateResponse:
         job_id = uuid.uuid4().hex
         out_path = GENERATED_DIR / f"{job_id}.stl"
 
-        try:
-            run_cadquery(code, out_path)
-        except SandboxError as e:
+        last_error: str | None = None
+        for attempt in range(MAX_REPAIR_ATTEMPTS + 1):
+            try:
+                run_cadquery(code, out_path)
+                last_error = None
+                break
+            except SandboxError as e:
+                last_error = str(e)
+                if attempt == MAX_REPAIR_ATTEMPTS:
+                    break
+                try:
+                    code = await repair_code(
+                        broken_code=code,
+                        error_message=last_error,
+                        model_id=req.model,
+                        temperature=req.temperature,
+                    )
+                except LLMError as repair_err:
+                    raise HTTPException(
+                        status_code=422,
+                        detail={"message": last_error, "code": code},
+                    ) from repair_err
+
+        if last_error is not None:
             raise HTTPException(
                 status_code=422,
-                detail={"message": str(e), "code": code},
+                detail={
+                    "message": f"Failed after auto-repair: {last_error}",
+                    "code": code,
+                },
             )
 
         return GenerateResponse(

@@ -316,3 +316,77 @@ result = (
 Notice: only `size`, the new `corner_r` parameter, and the `.fillet()` call
 were added/changed. The hole, structure, and overall pattern were preserved.
 """
+
+
+REPAIR_PROMPT = """You are fixing a CadQuery script that failed to execute.
+
+Return your answer as a JSON object with a single key "code" whose value is the corrected complete Python code. Output nothing outside the JSON.
+
+# Rules
+
+1. The user provides the broken code and the error message from CadQuery.
+2. Diagnose the root cause and fix it. Do NOT just remove the failing line —
+   preserve the user's intent. If a fillet failed, find a way to apply
+   filleting that works (smaller radius, different edge selector, apply
+   earlier in the chain, or chamfer instead of fillet on bottom edges).
+3. Preserve the PARAMETERS section structure and the rest of the geometry.
+   Only change what's needed to make the script run.
+4. All hard rules from the original system still apply: import only
+   `cadquery` and `math`, assign final object to `result`, single object
+   not list/tuple, no file/network calls.
+
+# Common errors and fixes
+
+**"There are no suitable edges for chamfer or fillet"**
+- The edge selector matches zero edges. Common after boolean cuts destroy
+  the named edges. Move the fillet earlier in the chain (before the cut),
+  or use a different selector.
+- The radius is too large for the geometry. Reduce it (e.g., from 5 to 2).
+- The face/edge was consumed by a previous shell operation. Apply fillet
+  before shell, not after.
+
+**"BRep_API: command not done"**
+- A boolean operation produced invalid geometry. Often caused by
+  zero-thickness walls or self-intersecting shapes. Add a small epsilon
+  (e.g., 0.01mm) to dimensions to avoid coplanar faces.
+
+**"Variable 'result' is None" or "result not defined"**
+- The script forgot to assign to `result`. Add the assignment.
+
+**Import errors**
+- Only `cadquery` and `math` are allowed. Replace any other imports.
+- The correct import is `import cadquery as cq`, NOT `from cadquery import cq`.
+
+**`.shell()` failed**
+- Apply shell BEFORE fillet, not after. Reorder the chain.
+- For tapered or complex bodies, use boolean subtraction instead:
+  outer.cut(inner) where inner is slightly smaller.
+
+# Example
+
+Broken code:
+import cadquery as cq
+
+result = (
+    cq.Workplane("XY")
+    .box(20, 20, 20)
+    .faces(">Z").workplane()
+    .hole(10)
+    .edges("|Z").fillet(15)
+)
+
+Error: USER_CODE_ERROR: Standard_Failure: There are no suitable edges for chamfer or fillet
+
+Fixed code:
+import cadquery as cq
+
+# Apply fillet BEFORE the hole cut, and use a sensible radius
+# (15mm was larger than the 10mm half-width of the face)
+result = (
+    cq.Workplane("XY")
+    .box(20, 20, 20)
+    .edges("|Z").fillet(2)
+    .faces(">Z").workplane()
+    .hole(10)
+)
+"""

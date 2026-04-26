@@ -12,19 +12,19 @@ KEEP_ALIVE = "30m"
 # Registry of available models. Keys are the user-facing IDs sent from the
 # frontend; values are the actual Ollama model strings + metadata.
 MODELS = {
+    "quality": {
+        "ollama_name": "qwen2.5-coder:32b-instruct-q4_K_S",
+        "label": "Quality (32B)",
+        "description": "~15-30s. Better CadQuery idioms. Use for new models.",
+    },
     "fast": {
         "ollama_name": "qwen2.5-coder:14b-instruct-q6_K",
         "label": "Fast (14B)",
-        "description": "~5-15s per request. Good for simple shapes.",
-    },
-    "better": {
-        "ollama_name": "qwen2.5-coder:32b-instruct-q4_K_S",
-        "label": "Better (32B)",
-        "description": "~15-40s per request. Handles complex geometry.",
+        "description": "~5-10s. Good for tweaking existing models, weaker for new ones.",
     },
 }
 
-DEFAULT_MODEL_ID = "fast"
+DEFAULT_MODEL_ID = "quality"
 
 
 class LLMError(Exception):
@@ -161,6 +161,89 @@ async def iterate_code(
                     "description": (
                         "Updated executable Python code using CadQuery. "
                         "Must define a variable named 'result'."
+                    ),
+                },
+            },
+            "required": ["code"],
+        },
+        "options": {"temperature": temperature},
+    }
+
+    timeout = httpx.Timeout(connect=5.0, read=600.0, write=10.0, pool=5.0)
+    response = None
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(OLLAMA_URL, json=payload)
+            break
+        except httpx.ConnectError as e:
+            raise LLMError(
+                f"Could not connect to Ollama at {OLLAMA_URL}."
+            ) from e
+        except httpx.TimeoutException as e:
+            raise LLMError(
+                "Ollama did not respond within timeout (10 min)."
+            ) from e
+        except (httpx.ReadError, httpx.RemoteProtocolError) as e:
+            if attempt == 2:
+                raise LLMError(
+                    f"Network error to Ollama after 3 attempts: {e}"
+                ) from e
+            await asyncio.sleep(2 ** attempt)
+
+    if response is None or response.status_code != 200:
+        status = response.status_code if response else "no response"
+        body = response.text[:300] if response else ""
+        raise LLMError(f"Ollama returned HTTP {status}: {body}")
+
+    data = response.json()
+    raw = data.get("message", {}).get("content", "")
+    if not raw:
+        raise LLMError("Empty response from Ollama.")
+
+    try:
+        parsed = json.loads(raw)
+        code = parsed.get("code", "").strip()
+    except json.JSONDecodeError:
+        code = _strip_code_fences(raw)
+
+    if not code:
+        raise LLMError("No code in response from Ollama.")
+
+    return code
+
+
+async def repair_code(
+    broken_code: str,
+    error_message: str,
+    model_id: str | None = None,
+    temperature: float = 0.2,
+) -> str:
+    """Ask the model to fix code that failed to execute."""
+    from prompts import REPAIR_PROMPT
+
+    model = resolve_model(model_id)
+
+    user_message = (
+        f"Broken code:\n{broken_code}\n\n"
+        f"Error: {error_message}"
+    )
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": REPAIR_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        "stream": False,
+        "keep_alive": KEEP_ALIVE,
+        "format": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": (
+                        "Corrected executable Python code using CadQuery."
                     ),
                 },
             },
