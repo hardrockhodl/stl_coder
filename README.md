@@ -2,6 +2,9 @@
 
 Describe a 3D object in text. A local LLM (qwen2.5-coder via Ollama) writes
 CadQuery code, the code runs in a sandbox, and you get an STL file back.
+You can then refine the model with follow-up instructions ("make it 5mm
+taller", "add rounded corners"), and revert to any earlier step in the
+history.
 
 The frontend is a pastel React app called **Unicorn Creative Magic** with a
 cloud-shaped prompt card, light/dark theme toggle, and an interactive 3D
@@ -10,7 +13,7 @@ preview powered by three.js.
 ## Quick start
 
 ```bash
-./INSTALL.sh   # sets up venv, installs Python and npm dependencies, pulls the model
+./INSTALL.sh   # sets up venv, installs Python and npm dependencies, pulls the models
 ./RUN.sh       # starts backend (8000) and frontend (5173), Ctrl-C stops both
 ```
 
@@ -24,23 +27,23 @@ scripts do — read on.
 The app ships with two models you can pick from the **Model** dropdown in the
 prompt card:
 
-| ID       | Ollama model                              | Size  | Latency        | When to use                       |
-|----------|-------------------------------------------|-------|----------------|-----------------------------------|
-| `fast`   | `qwen2.5-coder:14b-instruct-q6_K`         | 12 GB | ~5–15 s/req    | Simple shapes, quick iteration    |
-| `better` | `qwen2.5-coder:32b-instruct-q4_K_S`       | 19 GB | ~15–40 s/req   | Complex geometry, finer detail    |
+| ID         | Ollama model                             | Size  | Latency      | When to use                                            |
+|------------|------------------------------------------|-------|--------------|--------------------------------------------------------|
+| `quality`  | `qwen2.5-coder:32b-instruct-q4_K_S`      | 19 GB | ~15–30 s/req | New models from scratch — better CadQuery idioms.       |
+| `fast`     | `qwen2.5-coder:14b-instruct-q6_K`        | 12 GB | ~5–10 s/req  | Tweaking an existing model. Weaker on greenfield code.  |
 
-`fast` is the default. Both models are pulled by `INSTALL.sh`.
+`quality` is the default. Both models are pulled by `INSTALL.sh`.
 
-Only `fast` is warmed up at backend startup — the first time you switch the
-dropdown to `better`, expect a 30–60 s cold-load while Ollama brings the 32B
-into memory. After that, both models stay warm for `KEEP_ALIVE` (30 min by
-default; lower it in [backend/llm.py](backend/llm.py) if you want faster
+Only `quality` is warmed up at backend startup — the first time you switch
+the dropdown to `fast`, expect a 15–30 s cold-load while Ollama brings the
+14B into memory. After that, both models stay warm for `KEEP_ALIVE` (30 min
+by default; lower it in [backend/llm.py](backend/llm.py) if you want faster
 eviction).
 
 ### Memory budget
 
 On a 36 GB Apple Silicon machine, keeping both models resident is roughly
-12 GB + 19 GB = 31 GB, leaving ~5 GB for macOS, browser, and dev tooling.
+19 GB + 12 GB = 31 GB, leaving ~5 GB for macOS, browser, and dev tooling.
 That's tight; the app deliberately warms only the default to avoid swap.
 If you want a smaller footprint, edit `MODELS` in
 [backend/llm.py](backend/llm.py) and remove or replace one of the entries —
@@ -48,7 +51,8 @@ the dropdown picks up the change automatically.
 
 ### Smaller models
 
-If even 14B is too big, alternatives in descending order:
+If 32B is too big and you want a smaller default, alternatives in
+descending order:
 
 | RAM    | Model                              | Size   |
 |--------|------------------------------------|--------|
@@ -68,8 +72,8 @@ frontend dropdown reads it via `/api/models` so no UI changes are needed.
    forces the model to return clean code.)
 4. The two default models (pulled automatically by `INSTALL.sh`):
 
-       ollama pull qwen2.5-coder:14b-instruct-q6_K
        ollama pull qwen2.5-coder:32b-instruct-q4_K_S
+       ollama pull qwen2.5-coder:14b-instruct-q6_K
 
 ## Backend setup (manual)
 
@@ -110,19 +114,53 @@ talk without CORS hassles during development.
 
 ## Usage
 
+### Generate
+
 1. Type a description, for example:
    - `a 20×20×20 mm cube with a 10 mm cylindrical hole through the middle`
    - `a toothbrush holder with three compartments, 8 cm tall`
    - `a simple coffee mug, 8 cm tall, 7 cm diameter, with a handle`
    - `a hexagonal M10 nut with standard thread-profile clearance`
-2. Pick a model from the dropdown (`Fast` for quick iteration, `Better` for
-   complex geometry).
+2. Pick a model from the dropdown (`Quality` for new designs, `Fast` for
+   small tweaks once a model exists).
 3. Click **Generate** (or press `⌘/Ctrl+Enter`).
 4. Wait — the model writes code, the sandbox runs it, the STL appears in 3D.
 5. Click **Download STL** to save the file.
 
 The generated Python code is shown below the preview so you can see what
-the model did and tweak the prompt if the result isn't right.
+the model did.
+
+### Refine and iterate
+
+After a successful generation, the **Refine the model** card appears.
+Type a follow-up instruction and press Enter or click **Apply change**:
+
+- `make it 5mm taller`
+- `add rounded corners radius 3`
+- `move the holes 10mm apart`
+- `remove the handle`
+
+Each iteration appears in the **History** list with a numbered chip:
+
+- The active step has a gradient-filled chip and a `current` badge
+- All other steps have a **Show** button — click to revert to that step
+- Iterating from a reverted step branches off it, not from the latest
+- **Start over** clears the history and lets you start with a new prompt
+
+History is browser-only state; refreshing the page loses it.
+
+### Auto-repair on broken geometry
+
+When CadQuery can't execute the generated code (e.g.,
+`There are no suitable edges for chamfer or fillet` because a fillet
+radius is too large or applied after the wrong cut), the backend
+automatically asks the model to fix the code and runs it again. The user
+sees a longer loading time (~2× normal) but a working result instead of
+a 422 error.
+
+The repair budget is one extra LLM round-trip per request. If repair
+itself fails or the second sandbox run is also broken, the 422 is shown
+with the latest code so you can iterate from it manually.
 
 The sun/moon toggle in the upper-left switches between light and dark
 themes; the choice persists in `localStorage`.
@@ -154,15 +192,21 @@ curl http://localhost:8000/api/health
 
 # Available models (the dropdown reads this)
 curl http://localhost:8000/api/models
-# → {"default":"fast","models":[
-#      {"id":"fast","label":"Fast (14B)","description":"…"},
-#      {"id":"better","label":"Better (32B)","description":"…"}
+# → {"default":"quality","models":[
+#      {"id":"quality","label":"Quality (32B)","description":"…"},
+#      {"id":"fast","label":"Fast (14B)","description":"…"}
 #    ]}
 
 # Generate
 curl -X POST http://localhost:8000/api/generate \
   -H 'Content-Type: application/json' \
-  -d '{"prompt":"a 20mm cube with a 10mm hole","temperature":0.2,"model":"fast"}'
+  -d '{"prompt":"a 20mm cube with a 10mm hole","temperature":0.2,"model":"quality"}'
+# → {"job_id":"...","code":"...","stl_url":"/api/stl/..."}
+
+# Iterate (refine an existing model)
+curl -X POST http://localhost:8000/api/iterate \
+  -H 'Content-Type: application/json' \
+  -d '{"previous_code":"<code from /api/generate>","instruction":"make it 30mm","model":"quality"}'
 # → {"job_id":"...","code":"...","stl_url":"/api/stl/..."}
 
 # Download the STL
@@ -174,21 +218,23 @@ curl -O http://localhost:8000/api/stl/<job_id>
 | Symptom | Fix |
 |---|---|
 | `Could not connect to Ollama` | `ollama serve` is not running. Start it, or check whether port 11434 is in use. |
-| `model '...' not found` | Run `ollama pull qwen2.5-coder:14b-instruct-q6_K` (or the 32B). |
+| `model '...' not found` | Run `ollama pull qwen2.5-coder:32b-instruct-q4_K_S` (or the 14B). |
 | `Unknown model: '<id>'` | The frontend sent a model ID that isn't in the `MODELS` registry. Restart the backend after editing `MODELS` in [backend/llm.py](backend/llm.py). |
 | `Ollama did not respond within timeout (10 min)` | The model probably hung — `pkill ollama && ollama serve`, wait 30 s, try again. See "The model takes forever" below. |
 | `ModuleNotFoundError: No module named 'cadquery'` | CadQuery isn't installed in the Python that uvicorn runs with. Install via conda/mamba (see Backend setup). |
 | `Generated code contains a forbidden construct` | The model tried to import something forbidden. Adjust the prompt or lower the temperature. |
 | `Variable 'result' is missing` | The model didn't follow the system prompt. Try again — possibly lower `temperature`. |
-| `Code execution took longer than 30 seconds` | Complex object or infinite loop. Simplify the prompt or switch to `Fast`. |
+| `Code execution took longer than 30 seconds` | Complex object or infinite loop. Simplify the prompt. |
+| `Failed after auto-repair: ...` | The model couldn't fix the broken code on the first repair attempt. The latest broken code is shown — iterate from it manually with a clearer instruction, or **Start over** with a different prompt. |
 | 3D view shows nothing | Open the devtools console — the STL may be empty. Verify that the backend returned a valid STL. |
+| **Show** button on a history step 404s | STL files in `backend/generated/` are auto-cleaned after 24 h. Older history entries lose their STL even though the code is still in the browser. Iterate from the entry instead — the code is still there. |
 
 ### The model takes forever or times out
 
 The first request after Ollama starts loads the model into memory:
 ~15–30 s for 14B, ~30–90 s for 32B. The backend's startup hook pre-warms
-the default model so the first prompt with `Fast` is already warm. The
-first prompt with `Better` will cold-load.
+the default model (`quality` / 32B) so the first prompt is already warm.
+The first prompt with `fast` will cold-load.
 
 To keep models loaded permanently (skip cold-loads entirely) start Ollama
 with:
@@ -202,7 +248,7 @@ Pre-warm right after start:
 
 ```bash
 curl http://localhost:11434/api/chat \
-  -d '{"model":"qwen2.5-coder:14b-instruct-q6_K","messages":[{"role":"user","content":"hi"}],"keep_alive":-1}'
+  -d '{"model":"qwen2.5-coder:32b-instruct-q4_K_S","messages":[{"role":"user","content":"hi"}],"keep_alive":-1}'
 ```
 
 The backend already sends `keep_alive: 30m` on every request, so models
@@ -211,6 +257,15 @@ counts as inactivity for the previous model — Ollama unloads it after
 30 min and frees the RAM. Lower `KEEP_ALIVE` in
 [backend/llm.py](backend/llm.py) (e.g. `"5m"`) for faster eviction at the
 cost of more cold-loads.
+
+### Generation feels twice as slow as expected
+
+It's probably auto-repair: the first sandbox run failed (usually a fillet
+or boolean error), the backend silently asked the model to fix it, and the
+second sandbox run succeeded. Check `backend/.uvicorn.log` — you'll see
+two POSTs to `/api/chat` for the same request. The result is correct;
+just slower. To disable auto-repair entirely, set `MAX_REPAIR_ATTEMPTS = 0`
+in [backend/main.py](backend/main.py).
 
 ### The model returns explanatory text instead of just code
 
@@ -224,18 +279,24 @@ later. Upgrade with `brew upgrade ollama` on macOS.
 Implemented:
 
 - Cloud-shaped prompt card with sun/moon dark-mode toggle
-- Two-model dropdown driven by the `/api/models` registry
+- Two-model dropdown driven by the `/api/models` registry (`quality` default)
 - Adjustable `temperature` per request
 - Live elapsed-seconds counter and pulsing gradient loader
 - Cold-load hint after 30 s
+- Iteration: refine the current model with follow-up instructions
+- History list with numbered steps, "Show" buttons to revert, and a
+  `current` badge — iterating from a reverted step branches off it
+- Auto-repair: on `SandboxError`, the backend asks the model to fix the
+  code and retries once before surfacing a 422
 - Sandboxed CadQuery execution (subprocess, isolated mode, regex validator,
   resource limits, temp-dir cwd)
 - 3D preview with theme-aware background and pink rim light
 - Syntax-highlighted code panel
 - Background warmup of the default model at backend startup
-- Auto-cleanup of STL files older than 1 hour
+- Auto-cleanup of STL files older than 24 h
 
 Not yet implemented:
 
-- "Iterate" button: feed back error + code for another shot
-- History in `localStorage`
+- History persisted to `localStorage` (currently lost on refresh)
+- "Fork" indicator in the history UI when a step branches from a
+  reverted parent
