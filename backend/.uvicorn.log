@@ -1,0 +1,30 @@
+INFO:     Will watch for changes in these directories: ['/Users/christoffer.larsson/github-hardrockhodl/stl_coder/backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [27551] using WatchFiles
+INFO:     Started server process [27555]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:56048 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56349 - "POST /api/generate HTTP/1.1" 502 Bad Gateway
+INFO:     127.0.0.1:56545 - "POST /api/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56553 - "GET /api/stl/802d2d02d4c24f5591f1057f51f70b03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56558 - "POST /api/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56563 - "GET /api/stl/5964be10c44048c98ff50480bb7f29aa HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56567 - "POST /api/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56573 - "GET /api/stl/ceb9c58061c44e4aa66e7d17e64e0001 HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [27555]
+INFO:     Started server process [30274]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [30274]
+INFO:     Started server process [30328]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
