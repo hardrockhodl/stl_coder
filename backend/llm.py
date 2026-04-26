@@ -129,6 +129,90 @@ async def generate_code(
     return code
 
 
+async def iterate_code(
+    previous_code: str,
+    instruction: str,
+    model_id: str | None = None,
+    temperature: float = 0.2,
+) -> str:
+    """Refine an existing CadQuery script based on user feedback."""
+    from prompts import ITERATE_PROMPT  # local import to avoid circular if any
+
+    model = resolve_model(model_id)
+
+    user_message = (
+        f"Previous code:\n{previous_code}\n\n"
+        f"Change request: {instruction}"
+    )
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": ITERATE_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        "stream": False,
+        "keep_alive": KEEP_ALIVE,
+        "format": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": (
+                        "Updated executable Python code using CadQuery. "
+                        "Must define a variable named 'result'."
+                    ),
+                },
+            },
+            "required": ["code"],
+        },
+        "options": {"temperature": temperature},
+    }
+
+    timeout = httpx.Timeout(connect=5.0, read=600.0, write=10.0, pool=5.0)
+    response = None
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(OLLAMA_URL, json=payload)
+            break
+        except httpx.ConnectError as e:
+            raise LLMError(
+                f"Could not connect to Ollama at {OLLAMA_URL}."
+            ) from e
+        except httpx.TimeoutException as e:
+            raise LLMError(
+                "Ollama did not respond within timeout (10 min)."
+            ) from e
+        except (httpx.ReadError, httpx.RemoteProtocolError) as e:
+            if attempt == 2:
+                raise LLMError(
+                    f"Network error to Ollama after 3 attempts: {e}"
+                ) from e
+            await asyncio.sleep(2 ** attempt)
+
+    if response is None or response.status_code != 200:
+        status = response.status_code if response else "no response"
+        body = response.text[:300] if response else ""
+        raise LLMError(f"Ollama returned HTTP {status}: {body}")
+
+    data = response.json()
+    raw = data.get("message", {}).get("content", "")
+    if not raw:
+        raise LLMError("Empty response from Ollama.")
+
+    try:
+        parsed = json.loads(raw)
+        code = parsed.get("code", "").strip()
+    except json.JSONDecodeError:
+        code = _strip_code_fences(raw)
+
+    if not code:
+        raise LLMError("No code in response from Ollama.")
+
+    return code
+
+
 async def warmup(model_id: str | None = None) -> bool:
     """Trigger model load without generating. True if Ollama responded."""
     model = resolve_model(model_id)

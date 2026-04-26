@@ -10,7 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from llm import DEFAULT_MODEL_ID, MODELS, LLMError, generate_code, warmup
+from llm import (
+    DEFAULT_MODEL_ID,
+    MODELS,
+    LLMError,
+    generate_code,
+    iterate_code,
+    warmup,
+)
 from sandbox import SandboxError, run_cadquery
 
 GENERATED_DIR = Path(__file__).parent / "generated"
@@ -41,7 +48,9 @@ app.add_middleware(
 )
 
 
-def _cleanup_old_stls(max_age_seconds: int = 3600) -> None:
+def _cleanup_old_stls(max_age_seconds: int = 86400) -> None:
+    # 24h window so iteration history's revert links don't 404 mid-session.
+    # Anything older is fair game — these are LLM-generated parts, not data.
     now = time.time()
     for f in GENERATED_DIR.glob("*.stl"):
         try:
@@ -53,6 +62,13 @@ def _cleanup_old_stls(max_age_seconds: int = 3600) -> None:
 
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=4000)
+    temperature: float = Field(default=0.2, ge=0.0, le=2.0)
+    model: str = Field(default=DEFAULT_MODEL_ID)
+
+
+class IterateRequest(BaseModel):
+    previous_code: str = Field(..., min_length=1, max_length=50_000)
+    instruction: str = Field(..., min_length=1, max_length=2000)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     model: str = Field(default=DEFAULT_MODEL_ID)
 
@@ -91,6 +107,39 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         try:
             code = await generate_code(
                 req.prompt,
+                model_id=req.model,
+                temperature=req.temperature,
+            )
+        except LLMError as e:
+            raise HTTPException(status_code=502, detail=str(e))
+
+        job_id = uuid.uuid4().hex
+        out_path = GENERATED_DIR / f"{job_id}.stl"
+
+        try:
+            run_cadquery(code, out_path)
+        except SandboxError as e:
+            raise HTTPException(
+                status_code=422,
+                detail={"message": str(e), "code": code},
+            )
+
+        return GenerateResponse(
+            job_id=job_id,
+            code=code,
+            stl_url=f"/api/stl/{job_id}",
+        )
+
+
+@app.post("/api/iterate", response_model=GenerateResponse)
+async def iterate(req: IterateRequest) -> GenerateResponse:
+    async with _gen_semaphore:
+        _cleanup_old_stls()
+
+        try:
+            code = await iterate_code(
+                req.previous_code,
+                req.instruction,
                 model_id=req.model,
                 temperature=req.temperature,
             )

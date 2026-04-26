@@ -23,6 +23,10 @@ export default function App() {
   const [showCode, setShowCode] = useState(true);
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
+  const [iterateInstruction, setIterateInstruction] = useState("");
+  const [iterating, setIterating] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [currentStep, setCurrentStep] = useState(null);
   const codeRef = useRef(null);
 
   useEffect(() => {
@@ -92,11 +96,93 @@ export default function App() {
         return;
       }
       setResult(data);
+      setHistory((h) => {
+        const next = [
+          ...h,
+          {
+            instruction: prompt,
+            code: data.code,
+            stl_url: data.stl_url,
+            job_id: data.job_id,
+          },
+        ];
+        setCurrentStep(next.length - 1);
+        return next;
+      });
     } catch (e) {
       setError(`Network error: ${e.message}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const iterate = async () => {
+    if (!iterateInstruction.trim() || iterating || !result?.code) return;
+    setIterating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/iterate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          previous_code: history[currentStep]?.code || result.code,
+          instruction: iterateInstruction,
+          temperature,
+          model: selectedModel,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = data.detail;
+        if (detail && typeof detail === "object" && detail.code) {
+          setError(detail.message || "Iteration failed.");
+          setResult({ code: detail.code, stl_url: null, job_id: null });
+        } else {
+          setError(typeof detail === "string" ? detail : `HTTP ${res.status}`);
+        }
+        return;
+      }
+      setResult(data);
+      setHistory((h) => {
+        const next = [
+          ...h,
+          {
+            instruction: iterateInstruction,
+            code: data.code,
+            stl_url: data.stl_url,
+            job_id: data.job_id,
+          },
+        ];
+        setCurrentStep(next.length - 1);
+        return next;
+      });
+      setIterateInstruction("");
+    } catch (e) {
+      setError(`Network error: ${e.message}`);
+    } finally {
+      setIterating(false);
+    }
+  };
+
+  const revertTo = (index) => {
+    const step = history[index];
+    if (!step) return;
+    setResult({
+      code: step.code,
+      stl_url: step.stl_url,
+      job_id: step.job_id,
+    });
+    setCurrentStep(index);
+    setError(null);
+  };
+
+  const reset = () => {
+    setResult(null);
+    setError(null);
+    setHistory([]);
+    setIterateInstruction("");
+    setPrompt("");
+    setCurrentStep(null);
   };
 
   const onKeyDown = (e) => {
@@ -214,6 +300,82 @@ export default function App() {
               Download STL
             </a>
           </div>
+        </section>
+      )}
+
+      {result?.stl_url && (
+        <section className="card iterate-card">
+          <div className="card-header">
+            <h2>Refine the model</h2>
+            <button className="code-toggle" onClick={reset}>
+              Start over
+            </button>
+          </div>
+          <div className="iterate-input-row">
+            <input
+              type="text"
+              className="iterate-input"
+              placeholder='e.g. "make it 5mm taller" or "add rounded corners"'
+              value={iterateInstruction}
+              onChange={(e) => setIterateInstruction(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") iterate();
+              }}
+              disabled={iterating}
+            />
+            <button
+              className="btn-primary"
+              onClick={iterate}
+              disabled={iterating || !iterateInstruction.trim()}
+            >
+              {iterating ? (
+                <>
+                  <span className="pulse" />
+                  Refining...
+                </>
+              ) : (
+                "Apply change"
+              )}
+            </button>
+          </div>
+          {history.length > 0 && (
+            <div className="history">
+              <div className="history-label">History</div>
+              <ol>
+                {history.map((h, i) => (
+                  <li
+                    key={h.job_id || i}
+                    className={
+                      i === currentStep ? "history-item active" : "history-item"
+                    }
+                  >
+                    <span className="history-text">
+                      {i === 0 ? (
+                        <span className="history-initial">{h.instruction}</span>
+                      ) : (
+                        h.instruction
+                      )}
+                    </span>
+                    {i !== currentStep && (
+                      <button
+                        className="history-revert"
+                        onClick={() => revertTo(i)}
+                        title={`Revert to step ${i + 1}`}
+                        disabled={iterating || loading}
+                      >
+                        Show
+                      </button>
+                    )}
+                    {i === currentStep && (
+                      <span className="history-current" aria-label="current step">
+                        current
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </section>
       )}
 

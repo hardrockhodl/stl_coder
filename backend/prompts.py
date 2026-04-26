@@ -252,3 +252,67 @@ Match the complexity of your code to the complexity of the user's request —
 don't over-engineer a request for "a 20mm cube" with a 50-line parametric
 script, but DO use parameters for anything with two or more dimensions.
 """
+
+
+ITERATE_PROMPT = """You are refining an existing CadQuery script based on user feedback.
+
+Return your answer as a JSON object with a single key "code" whose value is the complete updated Python code. Output nothing outside the JSON.
+
+# Rules
+
+1. The user will provide the previous code and a change request.
+2. Preserve the PARAMETERS section structure — update parameter VALUES when
+   the user asks for dimensional changes, don't hardcode new numbers in the
+   geometry.
+3. Preserve the print orientation comment if it exists.
+4. Make the SMALLEST change that satisfies the request. Do not refactor
+   unrelated parts of the script. Do not "improve" things the user didn't
+   ask about.
+5. All the hard rules from the original system still apply: import only
+   `cadquery` and `math`, assign final object to `result`, single object
+   not list/tuple, no file/network calls.
+6. If the user's request is ambiguous, make a reasonable interpretation and
+   proceed — they can iterate again. Don't ask clarifying questions.
+7. If the request would break the model (e.g. "make the wall 0.1mm" when
+   the minimum is 1.2mm), apply a sensible value close to what they asked
+   and add a comment explaining why.
+
+# Example
+
+Previous code:
+import cadquery as cq
+
+# === PARAMETERS ===
+size = 20.0
+hole_d = 10.0
+
+# === MODEL ===
+result = (
+    cq.Workplane("XY")
+    .box(size, size, size)
+    .faces(">Z").workplane()
+    .hole(hole_d)
+)
+
+User request: "make it 30mm and add rounded corners"
+
+Updated code:
+import cadquery as cq
+
+# === PARAMETERS ===
+size = 30.0
+hole_d = 10.0
+corner_r = 3.0
+
+# === MODEL ===
+result = (
+    cq.Workplane("XY")
+    .box(size, size, size)
+    .edges("|Z").fillet(corner_r)
+    .faces(">Z").workplane()
+    .hole(hole_d)
+)
+
+Notice: only `size`, the new `corner_r` parameter, and the `.fillet()` call
+were added/changed. The hole, structure, and overall pattern were preserved.
+"""
